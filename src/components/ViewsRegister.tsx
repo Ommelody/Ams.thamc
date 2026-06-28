@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { PageHead, Card, Badge, Btn, Select, InfoRow, QRCode } from './Shared';
 import { Icon, I } from './Icons';
 import { Asset } from '../types';
-import { CATEGORIES, DEPARTMENTS, STATUS_MAP, REPAIR_STATUS, REPAIRS_MOCK, thb, thDate } from '../data';
+import { CATEGORIES, DEPARTMENTS, STATUS_MAP, REPAIR_STATUS, REPAIRS_MOCK, thb, thDate, exportToExcel } from '../data';
 import { openPrint } from './FormsPrint';
 import { openMobile } from './MobileScan';
 
@@ -58,7 +58,27 @@ export function RegisterView({ query, assets, openAsset, openForm }: RegisterVie
         actions={
           <>
             <Btn icon={I.printer} variant="default" onClick={() => window.print()}>PDF</Btn>
-            <Btn icon={I.download} variant="default">Excel</Btn>
+            <Btn icon={I.download} variant="default" onClick={() => {
+              const headers = {
+                code: "รหัสครุภัณฑ์",
+                name: "ชื่อครุภัณฑ์",
+                cat: "หมวดหมู่",
+                dept: "ฝ่าย/แผนก",
+                holder: "ผู้ถือครอง",
+                loc: "สถานที่ตั้ง",
+                acquired: "วันที่ได้มา",
+                price: "ราคาทุน (บาท)",
+                vendor: "ผู้ขาย/บริษัท",
+                status: "สถานะ",
+                method: "วิธีการได้มา"
+              };
+              const exportRows = rows.map(r => ({
+                ...r,
+                cat: catName(r.cat),
+                status: STATUS_MAP[r.status as keyof typeof STATUS_MAP]?.label || r.status
+              }));
+              exportToExcel(exportRows, "Register_Assets.csv", headers);
+            }}>Excel</Btn>
             <Btn icon={I.plus} variant="primary" onClick={openForm}>ขึ้นทะเบียนครุภัณฑ์</Btn>
           </>
         } 

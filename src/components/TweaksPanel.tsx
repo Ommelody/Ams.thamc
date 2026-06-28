@@ -91,7 +91,7 @@ interface TweaksPanelProps {
 }
 
 export function TweaksPanel({ children }: TweaksPanelProps) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const dragRef = useRef<HTMLDivElement>(null);
   const PAD = 16;
 

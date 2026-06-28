@@ -1,6 +1,7 @@
 import { Category, Asset, Requisition, Repair, Disposal, Activity } from './types';
 
-export const CATEGORIES: Category[] = [
+// Load from localStorage or defaults
+const defaultCategories: Category[] = [
   { id: "C01", name: "ครุภัณฑ์คอมพิวเตอร์", life: 5, dep: 20 },
   { id: "C02", name: "ครุภัณฑ์สำนักงาน", life: 8, dep: 12.5 },
   { id: "C03", name: "ครุภัณฑ์ยานพาหนะและขนส่ง", life: 8, dep: 12.5 },
@@ -9,17 +10,17 @@ export const CATEGORIES: Category[] = [
   { id: "C06", name: "ครุภัณฑ์งานบ้านงานครัว", life: 5, dep: 20 },
 ];
 
-export const DEPARTMENTS = [
+const defaultDepartments = [
   "ฝ่ายบริหารทั่วไป", "ฝ่ายการเงินและพัสดุ", "ฝ่ายวิศวกรรมการแพทย์", "ฝ่ายการพยาบาล",
   "ฝ่ายบริการการแพทย์", "สำนักงานผู้อำนวยการ", "ศูนย์เทคโนโลยีสารสนเทศ",
 ];
 
-export const LOCATIONS = [
+const defaultLocations = [
   "อาคาร 1 ชั้น 2 ห้อง 201", "อาคาร 1 ชั้น 3 ห้อง 305", "อาคาร 2 ชั้น 1 ห้องประชุม",
   "อาคาร 2 ชั้น 4 ห้อง 410", "คลังพัสดุกลาง", "อาคาร 3 ชั้น 1 ห้องสำนักงาน",
 ];
 
-export const PEOPLE = [
+const defaultPeople = [
   { id: "U01", name: "สมชาย ใจดี", role: "เจ้าหน้าที่พัสดุ", dept: "ฝ่ายการเงินและพัสดุ", title: "นักวิชาการพัสดุชำนาญการ" },
   { id: "U02", name: "วิภาดา สุขใจ", role: "หัวหน้างาน", dept: "ฝ่ายวิศวกรรมการแพทย์", title: "หัวหน้าฝ่ายวิศวกรรมการแพทย์" },
   { id: "U03", name: "ธนกร พงษ์ศรี", role: "ผู้ใช้งาน", dept: "ศูนย์เทคโนโลยีสารสนเทศ", title: "นักวิชาการคอมพิวเตอร์ปฏิบัติการ" },
@@ -27,6 +28,42 @@ export const PEOPLE = [
   { id: "U05", name: "ประเสริฐ มั่นคง", role: "ผู้บริหาร", dept: "สำนักงานผู้อำนวยการ", title: "ผู้อำนวยการศูนย์การแพทย์ธรรมศาสตร์" },
   { id: "U06", name: "กนกพร วงศ์ทอง", role: "ผู้ใช้งาน", dept: "ฝ่ายการพยาบาล", title: "พยาบาลวิชาชีพชำนาญการ" },
 ];
+
+const loadLocal = <T,>(key: string, fallback: T): T => {
+  if (typeof window === "undefined") return fallback;
+  const val = localStorage.getItem(key);
+  if (!val) return fallback;
+  try {
+    return JSON.parse(val) as T;
+  } catch (e) {
+    return fallback;
+  }
+};
+
+export const CATEGORIES: Category[] = loadLocal("ams_categories", defaultCategories);
+export const DEPARTMENTS: string[] = loadLocal("ams_departments", defaultDepartments);
+export const LOCATIONS: string[] = loadLocal("ams_locations", defaultLocations);
+export const PEOPLE: any[] = loadLocal("ams_people", defaultPeople);
+
+export function updateCategories(newCats: Category[]) {
+  CATEGORIES.splice(0, CATEGORIES.length, ...newCats);
+  localStorage.setItem("ams_categories", JSON.stringify(newCats));
+}
+
+export function updateDepartments(newDepts: string[]) {
+  DEPARTMENTS.splice(0, DEPARTMENTS.length, ...newDepts);
+  localStorage.setItem("ams_departments", JSON.stringify(newDepts));
+}
+
+export function updateLocations(newLocs: string[]) {
+  LOCATIONS.splice(0, LOCATIONS.length, ...newLocs);
+  localStorage.setItem("ams_locations", JSON.stringify(newLocs));
+}
+
+export function updatePeople(newPeople: any[]) {
+  PEOPLE.splice(0, PEOPLE.length, ...newPeople);
+  localStorage.setItem("ams_people", JSON.stringify(newPeople));
+}
 
 export const ROLES = [
   { id: "staff", label: "เจ้าหน้าที่พัสดุ", name: "สมชาย ใจดี", title: "นักวิชาการพัสดุชำนาญการ" },
@@ -71,6 +108,37 @@ export function thDate(iso: string): string {
   const d = new Date(iso);
   const m = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
   return `${d.getDate()} ${m[d.getMonth()]} ${d.getFullYear() + 543}`;
+}
+
+export function exportToExcel(data: any[], filename: string, headers: Record<string, string>) {
+  const headerKeys = Object.keys(headers);
+  const headerLabels = Object.values(headers);
+  
+  const csvRows = [];
+  // UTF-8 BOM is required for Thai Excel to display correctly
+  csvRows.push(headerLabels.map(h => `"${h.replace(/"/g, '""')}"`).join(","));
+  
+  for (const row of data) {
+    const values = headerKeys.map(key => {
+      let val = row[key];
+      if (val === undefined || val === null) val = "";
+      const valStr = String(val);
+      return `"${valStr.replace(/"/g, '""')}"`;
+    });
+    csvRows.push(values.join(","));
+  }
+  
+  const csvContent = "\uFEFF" + csvRows.join("\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", filename);
+  link.style.visibility = "hidden";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 export const ASSETS_MOCK: Asset[] = [

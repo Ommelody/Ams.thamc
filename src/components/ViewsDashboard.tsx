@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, PageHead, Btn, Badge, TONES } from './Shared';
 import { Icon, I } from './Icons';
 import { Asset, Requisition, Activity } from '../types';
-import { CATEGORIES, REQ_STATUS, ROLES, thb } from '../data';
+import { CATEGORIES, REQ_STATUS, ROLES, thb, exportToExcel } from '../data';
 
 interface StatCardProps {
   icon: React.ReactNode;
@@ -141,7 +141,13 @@ export function Dashboard({ role, setView, openAsset, assets, requisitions, acti
         <Card>
           <div style={{ display: "flex", alignItems: "center", justifyBetween: "space-between" as any, marginBottom: 20, justifyContent: "space-between" }}>
             <h3 style={{ margin: 0, fontSize: 16.5, fontWeight: 700 }}>มูลค่าครุภัณฑ์ตามหมวดหมู่</h3>
-            <Btn size="sm" variant="ghost" icon={I.download}>Excel</Btn>
+            <Btn size="sm" variant="ghost" icon={I.download} onClick={() => {
+              exportToExcel(byCat, "Dashboard_Category_Summary.csv", {
+                name: "หมวดหมู่ครุภัณฑ์",
+                count: "จำนวนครุภัณฑ์ (รายการ)",
+                value: "มูลค่าครุภัณฑ์สะสม (บาท)"
+              });
+            }}>Excel</Btn>
           </div>
           <BarChart data={byCat} />
         </Card>

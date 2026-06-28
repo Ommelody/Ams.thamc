@@ -52,6 +52,7 @@ import { RegisterForm, SlideOver } from './components/FormsRegister';
 import { RequisitionView } from './components/ViewsRequisition';
 import { RepairView, DisposalView, ReturnView } from './components/ViewsOps';
 import { ReportsView, AuditView, SettingsView } from './components/ViewsAdmin';
+import { AuthView } from './components/Auth';
 
 
 const NAV = [
@@ -85,7 +86,51 @@ const PRIMARY_SOFT: Record<string, string> = {
 export default function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const [view, setView] = useState("dashboard");
-  const [role, setRole] = useState("staff");
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    const raw = localStorage.getItem("ams_current_user");
+    return raw ? JSON.parse(raw) : null;
+  });
+  const [role, setRole] = useState<string>(() => {
+    const raw = localStorage.getItem("ams_current_user");
+    if (raw) {
+      const user = JSON.parse(raw);
+      const roleMap: Record<string, string> = {
+        "เจ้าหน้าที่พัสดุ": "staff",
+        "หัวหน้างาน": "approver",
+        "ผู้บริหาร": "exec",
+        "ผู้ใช้งาน": "user"
+      };
+      return roleMap[user.role] || "user";
+    }
+    return "staff";
+  });
+
+  const handleLogin = (user: any) => {
+    setCurrentUser(user);
+    localStorage.setItem("ams_current_user", JSON.stringify(user));
+    
+    // Map User Role to App role:
+    const roleMap: Record<string, string> = {
+      "เจ้าหน้าที่พัสดุ": "staff",
+      "หัวหน้างาน": "approver",
+      "ผู้บริหาร": "exec",
+      "ผู้ใช้งาน": "user"
+    };
+    const appRole = roleMap[user.role] || "user";
+    setRole(appRole);
+    
+    // save state
+    const state = { view: "dashboard", role: appRole };
+    localStorage.setItem("ams_state", JSON.stringify(state));
+    setView("dashboard");
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem("ams_current_user");
+    localStorage.removeItem("ams_state");
+  };
+
   const [query, setQuery] = useState("");
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [showForm, setShowForm] = useState<boolean | string>(false);
@@ -100,6 +145,10 @@ export default function App() {
   const [repairs, setRepairs] = useState<Repair[]>([]);
   const [disposals, setDisposals] = useState<Disposal[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [masterKey, setMasterKey] = useState(0);
+  const handleMasterDataChange = () => {
+    setMasterKey(p => p + 1);
+  };
   const [supabaseStatus, setSupabaseStatus] = useState<any>({
     connected: false,
     tablesExist: { assets: false, requisitions: false, repairs: false, disposals: false, categories: false },
@@ -362,6 +411,14 @@ export default function App() {
     "--font": fontCSS,
   };
 
+  if (!currentUser) {
+    return (
+      <div style={vars}>
+        <AuthView onLogin={handleLogin} />
+      </div>
+    );
+  }
+
   // nav visibility by RBAC role policy
   const allowedNavs: string[] = {
     staff: NAV.map(n => n.id),
@@ -390,9 +447,9 @@ export default function App() {
       case "audit": 
         return <AuditView assets={assets} onAuditAsset={handleAuditAsset} />;
       case "reports": 
-        return <ReportsView />;
+        return <ReportsView assets={assets} requisitions={requisitions} disposals={disposals} />;
       case "settings": 
-        return <SettingsView supabaseStatus={supabaseStatus} onTriggerSeed={triggerDatabaseSeed} />;
+        return <SettingsView supabaseStatus={supabaseStatus} onTriggerSeed={triggerDatabaseSeed} onMasterDataChange={handleMasterDataChange} />;
       default: 
         return <Dashboard role={role} setView={setView} openAsset={setSelectedAsset} assets={assets} requisitions={requisitions} activities={activities} />;
     }
@@ -433,38 +490,47 @@ export default function App() {
         {notifOpen && <NotifPanel requisitions={requisitions} />}
       </div>
 
-      {/* Role / User selector */}
+      {/* Active User / Profile Card */}
       <div style={{ position: "relative" }}>
-        <button onClick={() => { setRoleOpen(o => !o); setNotifOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 11, padding: "5px 8px 5px 6px", borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface)", cursor: "pointer", fontFamily: "inherit" }}>
+        <button onClick={() => { setRoleOpen(o => !o); setNotifOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 11, padding: "5px 12px 5px 6px", borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface)", cursor: "pointer", fontFamily: "inherit" }}>
           <div style={{ width: 34, height: 34, borderRadius: 8, background: "var(--primary)", color: "#fff", display: "grid", placeItems: "center", fontWeight: 700, fontSize: 16 }}>
-            {(ROLES.find(x => x.id === role)?.name || "ส")[0]}
+            {currentUser?.name ? currentUser.name[0] : "U"}
           </div>
           <div style={{ textAlign: "left", lineHeight: 1.25, whiteSpace: "nowrap" }}>
-            <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--text)" }}>{ROLES.find(x => x.id === role)?.name}</div>
-            <div style={{ fontSize: 12, color: "var(--muted)" }}>{ROLES.find(x => x.id === role)?.label}</div>
+            <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--text)" }}>{currentUser?.name || "ผู้ใช้งาน"}</div>
+            <div style={{ fontSize: 12, color: "var(--muted)" }}>{currentUser?.role || "ผู้ใช้งานทั่วไป"}</div>
           </div>
-          <span style={{ transform: "rotate(90deg)" }}><Icon d={I.chevron} size={16} stroke="var(--muted)" /></span>
+          <span style={{ transform: "rotate(90deg)", marginLeft: 4 }}><Icon d={I.chevron} size={16} stroke="var(--muted)" /></span>
         </button>
         
         {roleOpen && (
-          <div style={{ position: "absolute", right: 0, top: 50, width: 268, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, boxShadow: "0 12px 32px rgba(20,35,58,.16)", padding: 8, zIndex: 40 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--muted)", padding: "6px 10px", textTransform: "uppercase", letterSpacing: ".04em" }}>สลับสิทธิ์การเข้าชม (RBAC)</div>
-            {ROLES.map(opt => (
-              <button key={opt.id} onClick={() => { setRole(opt.id); setRoleOpen(false); }} style={{
-                width: "100%", display: "flex", alignItems: "center", gap: 11, padding: "9px 10px", borderRadius: 9,
-                border: "none", cursor: "pointer", textAlign: "left", fontFamily: "inherit",
-                background: opt.id === role ? "var(--primary-soft)" : "transparent",
+          <div style={{ position: "absolute", right: 0, top: 50, width: 280, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, boxShadow: "0 12px 32px rgba(20,35,58,.16)", padding: "16px 14px", zIndex: 40 }}>
+            <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: 12 }}>ข้อมูลผู้เข้าใช้งานระบบ</div>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: 3, marginBottom: 14 }}>
+              <div style={{ fontSize: 14.5, fontWeight: 700, color: "var(--text)" }}>{currentUser?.name}</div>
+              <div style={{ fontSize: 12, color: "var(--muted)", fontFamily: "monospace" }}>Username: @{currentUser?.username}</div>
+              <div style={{ fontSize: 12.5, color: "var(--text)", marginTop: 6, display: "flex", flexDirection: "column", gap: 2 }}>
+                <div><b>ฝ่าย:</b> {currentUser?.dept || "-"}</div>
+                <div><b>ตำแหน่ง:</b> {currentUser?.title || "-"}</div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px", background: "var(--hover)", borderRadius: 6, marginBottom: 16 }}>
+              <span style={{ width: 6, height: 6, borderRadius: 9, background: "green" }} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)" }}>สิทธิ์ระบบ: <span style={{ color: "var(--primary)" }}>{currentUser?.role}</span></span>
+            </div>
+
+            <button 
+              onClick={handleLogout} 
+              style={{
+                width: "100%", padding: "8px 0", borderRadius: 8, border: "none", cursor: "pointer", 
+                fontFamily: "inherit", fontSize: 13.5, fontWeight: 700, color: "#fff", background: "#ef4444",
+                textAlign: "center"
               }}
-                onMouseEnter={(e) => { if (opt.id !== role) e.currentTarget.style.background = "var(--hover)"; }}
-                onMouseLeave={(e) => { if (opt.id !== role) e.currentTarget.style.background = "transparent"; }}>
-                <div style={{ width: 30, height: 30, borderRadius: 7, background: opt.id === role ? "var(--primary)" : "var(--hover)", color: opt.id === role ? "#fff" : "var(--muted)", display: "grid", placeItems: "center", fontWeight: 700, fontSize: 14 }}>{opt.name[0]}</div>
-                <div style={{ flex: 1, lineHeight: 1.3 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--text)" }}>{opt.label}</div>
-                  <div style={{ fontSize: 12, color: "var(--muted)" }}>{opt.name}</div>
-                </div>
-                {opt.id === role && <Icon d={I.check} size={17} stroke="var(--primary)" />}
-              </button>
-            ))}
+            >
+              ออกจากระบบ (Logout)
+            </button>
           </div>
         )}
       </div>
