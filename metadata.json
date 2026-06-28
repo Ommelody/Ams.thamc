@@ -1,0 +1,6 @@
+{
+  "name": "ระบบจัดการทะเบียนครุภัณฑ์",
+  "description": "ระบบจัดการทะเบียนครุภัณฑ์ ศูนย์การแพทย์ธรรมศาสตร์ เชื่อมต่อกับฐานข้อมูล Supabase จัดการ ทะเบียนครุภัณฑ์ การเบิกจ่าย ซ่อมบำรุง และตรวจสอบสภาพพร้อมฉลาก QR Code",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

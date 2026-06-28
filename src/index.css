@@ -1,0 +1,47 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+:root {
+  --bg: #f8fafc;         /* Solid soft slate background */
+  --surface: #ffffff;    /* Solid pure white surface */
+  --text: #0f172a;       /* Slate dark neutral text */
+  --muted: #627185;      /* Slate gray muted text */
+  --border: #e2e8f0;     /* Clear solid border */
+  --th-bg: #f1f5f9;      /* Table header row solid */
+  --hover: #f1f5f9;      /* Hover solid slate */
+}
+
+@theme {
+  --font-sans: "Inter", "Sarabun", "Noto Sans Thai", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translate(-50%, 16px); opacity: 0; }
+  to { transform: translate(-50%, 0); opacity: 1; }
+}
+
+@keyframes scanLine {
+  0% { top: 8%; }
+  50% { top: 88%; }
+  100% { top: 8%; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .3; }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.18s ease-out;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.3s cubic-bezier(.2,.7,.2,1);
+}
+
